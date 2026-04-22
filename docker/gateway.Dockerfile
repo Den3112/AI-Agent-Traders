@@ -8,7 +8,11 @@ RUN apt-get update && apt-get install -y \
     bash \
     curl \
     git \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Install uv for blazing fast python dependency management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Set working directory
 WORKDIR /app
@@ -17,13 +21,17 @@ WORKDIR /app
 RUN groupadd -r openclaw && useradd -r -g openclaw openclaw \
     && chown -R openclaw:openclaw /app
 
-# Install OpenClaw globally
-RUN npm install -g openclaw@2026.4.15
+# Install OpenClaw globally (optimized)
+RUN npm install -g openclaw@2026.4.15 && npm cache clean --force
+
+# Use a virtual environment with uv
+ENV VIRTUAL_ENV=/app/.venv
+RUN /bin/uv venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Install Python dependencies from pyproject.toml
 COPY pyproject.toml .
-# We use --break-system-packages because we are in a container and want these global to the container
-RUN pip3 install --break-system-packages --no-cache-dir .
+RUN /bin/uv pip install . --no-cache
 
 # Copy the rest of the application (excluding what's in .dockerignore)
 COPY . .

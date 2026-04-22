@@ -26,6 +26,14 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.10'
+          memory: 128M
 
   dashboard:
     build:
@@ -40,6 +48,28 @@ services:
       - ./data:/app/data
       - ./logs/heartbeat.log:/app/heartbeat.log
       - /app/dashboard/node_modules
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    init: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 45s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 1024M
+        reservations:
+          cpus: '0.10'
+          memory: 256M
     restart: always
     depends_on:
       - gateway
@@ -53,11 +83,25 @@ services:
     environment:
       - OPENCLAW_URL=http://gateway:18789/chat
       - OPENCLAW_CONFIG_PATH=/app/config/openclaw.json
+      - TRADING_MODE=PAPER
+      - NODE_ENV=production
     volumes:
       - .:/app
-      - ./agents:/app/agents
-      - ./config/openclaw.json:/app/openclaw.json
-    command: ["python3", "scripts/ai/continuous_loop.py"]
+    init: true
+    command: ["/app/.venv/bin/python3", "scripts/ai/continuous_loop.py"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.40'
+          memory: 512M
+        reservations:
+          cpus: '0.10'
+          memory: 128M
     restart: always
     depends_on:
       - gateway

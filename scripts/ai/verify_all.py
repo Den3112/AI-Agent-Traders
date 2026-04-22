@@ -19,7 +19,7 @@ def check_curl(name, url, headers=None, data=None, method="GET"):
         cmd.extend(["-d", json.dumps(data)])
     
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, check=False)
         status = result.stdout.strip()
         if status in ["200", "201", "204"]:
             print(f"{GREEN}ОК ({status}){RESET}")
@@ -36,14 +36,14 @@ def check_redis(redis_url):
     try:
         # Пытаемся подключиться через redis-cli если он есть
         cmd = ["redis-cli", "-u", redis_url, "ping"]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5, check=False)
         if "PONG" in result.stdout:
             print(f"{GREEN}ОК (PONG){RESET}")
             return True
         else:
             print(f"{RED}Ошибка{RESET}")
             return False
-    except:
+    except Exception:
         print(f"{YELLOW}redis-cli не найден, пропускаю...{RESET}")
         return None
 

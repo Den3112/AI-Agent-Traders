@@ -10,7 +10,7 @@ for t in tokens:
     print(f"Проверка {t[:10]}...", end=" ")
     cmd = ["curl", "-s", "-o", "/dev/null", "-w", "%{http_code}", 
            "-H", f"Authorization: token {t}", "https://api.github.com/user"]
-    res = subprocess.run(cmd, capture_output=True, text=True)
+    res = subprocess.run(cmd, capture_output=True, text=True, check=False)
     if res.stdout.strip() == "200":
         print("✅ РАБОТАЕТ")
     else:

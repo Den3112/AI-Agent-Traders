@@ -1,6 +1,6 @@
 {
   "gateway": {
-    "bind": "0.0.0.0:18791",
+    "bind": "0.0.0.0:18789",
     "auth": {
       "mode": "token",
       "token": "admin123"

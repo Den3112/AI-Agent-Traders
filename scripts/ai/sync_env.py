@@ -23,9 +23,9 @@ def sync_env():
         
     env_keys = []
     for line in env_lines:
-        line = line.strip()
-        if line and not line.startswith('#') and '=' in line:
-            env_keys.append(line.split('=')[0])
+        stripped = line.strip()
+        if stripped and not stripped.startswith('#') and '=' in stripped:
+            env_keys.append(stripped.split('=')[0])
             
     # Читаем ключи из .env.example
     example_keys = []
@@ -33,9 +33,9 @@ def sync_env():
         with open(example_path) as f:
             example_lines = f.readlines()
         for line in example_lines:
-            line = line.strip()
-            if line and not line.startswith('#') and '=' in line:
-                example_keys.append(line.split('=')[0])
+            stripped = line.strip()
+            if stripped and not stripped.startswith('#') and '=' in stripped:
+                example_keys.append(stripped.split('=')[0])
     
     # Ищем недостающие ключи
     missing_keys = [k for k in env_keys if k not in example_keys]

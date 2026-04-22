@@ -22,7 +22,7 @@ def check_binance():
     try:
         response = requests.get("https://api.binance.com/api/v3/ping", timeout=5)
         return {"status": "ok" if response.status_code == 200 else "error"}
-    except:
+    except Exception:
         return {"status": "error"}
 
 def main():

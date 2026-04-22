@@ -20,7 +20,7 @@ def get_env(key: str) -> str:
                 for line in f:
                     if line.startswith(f"{key}="):
                         return line.strip().split("=", 1)[1]
-        except:
+        except Exception:
             pass
     return val
 
@@ -88,7 +88,7 @@ def main():
         # Пытаемся распарсить JSON если это объект
         try:
             val = json.loads(args.value)
-        except:
+        except Exception:
             val = args.value
         print(json.dumps(remember(args.agent, args.key, val), indent=2))
     

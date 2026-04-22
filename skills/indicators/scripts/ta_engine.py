@@ -8,11 +8,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def fetch_data(symbol, timeframe='1h', limit=100):
+def fetch_data(symbol, timeframe='1h', limit=100, exchange=None):
     """Fetch OHLCV from OKX."""
-    exchange = ccxt.okx({
-        'enableRateLimit': True,
-    })
+    if exchange is None:
+        exchange = ccxt.okx({
+            'enableRateLimit': True,
+        })
     
     try:
         ohlcv = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)

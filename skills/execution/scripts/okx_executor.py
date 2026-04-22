@@ -3,6 +3,7 @@ import argparse
 import json
 import logging
 import os
+import subprocess
 from datetime import datetime
 
 import ccxt
@@ -30,7 +31,6 @@ def execute_paper(symbol, side, amount, entry_price, stop_loss, take_profit_arg=
     
     # Auto-size logic if amount <= 0
     if amount <= 0:
-        import subprocess
         try:
             cmd = ["python3", "skills/execution/scripts/position_sizer.py", 
                    "--balance", str(state["balance"]), "--entry", str(entry_price), "--stop", str(stop_loss)]

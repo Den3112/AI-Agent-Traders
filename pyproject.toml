@@ -24,6 +24,11 @@ target-version = "py310"
 select = ["E", "F", "B", "I", "N", "UP", "PL"]
 ignore = ["PLR2004", "E501"]
 
+[tool.ruff.lint.pylint]
+max-branches = 20
+max-statements = 100
+max-args = 10
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"

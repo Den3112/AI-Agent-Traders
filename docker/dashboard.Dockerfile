@@ -9,7 +9,7 @@ RUN groupadd -r trader && useradd -r -g trader trader \
 
 # Pre-install dependencies to speed up startup
 COPY dashboard/package*.json ./
-RUN npm install
+RUN npm install && npm cache clean --force
 
 # Copy the rest of the dashboard code
 COPY dashboard/ ./
@@ -20,8 +20,11 @@ RUN chown -R trader:trader /app
 # Switch to non-root user
 USER trader
 
+# Build the application
+RUN npm run build
+
 # Expose Next.js port
 EXPOSE 3000
 
-# Start development server
-CMD ["npm", "run", "dev", "--", "-p", "3000", "-H", "0.0.0.0"]
+# Start production server
+CMD ["npm", "start", "--", "-p", "3000", "-H", "0.0.0.0"]

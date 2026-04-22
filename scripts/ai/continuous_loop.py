@@ -3,11 +3,20 @@ import json
 import logging
 import os
 import subprocess
+import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import ccxt
 import requests
 from dotenv import load_dotenv
+
+# Добавляем путь к TA Engine
+sys.path.append(os.path.join(os.getcwd(), "skills/indicators/scripts"))
+try:
+    import ta_engine
+except ImportError:
+    ta_engine = None
 
 # Настройка логирования
 logging.basicConfig(
@@ -37,18 +46,31 @@ def send_telegram(message):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
         requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": message})
-    except:
+    except Exception:
         pass
 
+_last_balance_mtime = 0.0
+_cached_balance = 100.0
+
 def get_current_balance():
-    """Получение баланса (Live с OKX или Paper из JSON)."""
+    """Получение баланса (Live с OKX или Paper из JSON) с кэшированием."""
+    global _last_balance_mtime, _cached_balance
     mode = os.getenv("TRADING_MODE", "PAPER")
     
     if mode == "PAPER":
         if os.path.exists(PAPER_STATE_FILE):
-            with open(PAPER_STATE_FILE) as f:
-                state = json.load(f)
-                return state.get("balance", 100.0)
+            try:
+                current_mtime = os.path.getmtime(PAPER_STATE_FILE)
+                if current_mtime <= _last_balance_mtime:
+                    return _cached_balance
+                
+                with open(PAPER_STATE_FILE) as f:
+                    state = json.load(f)
+                    _cached_balance = state.get("balance", 100.0)
+                    _last_balance_mtime = current_mtime
+                    return _cached_balance
+            except Exception:
+                return _cached_balance
         return 100.0
     
     # LIVE Mode
@@ -68,20 +90,24 @@ def sync_positions():
     """Запуск фонового мониторинга сделок."""
     try:
         subprocess.run(["python3", "skills/portfolio_tracker/scripts/sync_positions.py"], 
-                       capture_output=True, text=True)
+                       capture_output=True, text=True, check=False)
     except Exception as e:
         logging.error(f"Position sync failed: {e}")
 
-def run_analysis(symbol):
-    """Запуск TA Engine для конкретной пары."""
+def run_analysis(symbol, exchange):
+    """Запуск TA Engine для конкретной пары (внутри процесса)."""
+    if ta_engine is None:
+        logging.error("TA Engine module not found!")
+        return None
+        
     try:
-        cmd = ["python3", "skills/indicators/scripts/ta_engine.py", "--symbol", symbol]
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            return None
-        analysis = json.loads(result.stdout)
+        # Прямой вызов функций из модуля ta_engine вместо subprocess.run
+        df = ta_engine.fetch_data(symbol, "1h", limit=300, exchange=exchange)
+        analysis = ta_engine.analyze(df)
+        analysis["symbol"] = symbol
         return analysis
-    except Exception:
+    except Exception as e:
+        logging.error(f"In-process analysis failed for {symbol}: {e}")
         return None
 
 def trigger_agent(analysis_data, avg_volatility):
@@ -101,7 +127,8 @@ def trigger_agent(analysis_data, avg_volatility):
                 pos_count = len(state.get('positions', []))
                 pos_details = ", ".join([p['symbol'] for p in state.get('positions', [])])
                 portfolio_ctx = f"Balance: ${bal:.2f}, Positions Open: {pos_count} ({pos_details})"
-        except: pass
+        except Exception:
+            pass
 
     prompt = f"[AUTONOMOUS SIGNAL] Signal for {symbol}: RSI={rsi}, Trend={trend}, Price: {price}. Market Volatility: {avg_volatility:.2f}%. Portfolio: {portfolio_ctx}. Analyze and execute risk-adjusted trade."
     
@@ -110,7 +137,7 @@ def trigger_agent(analysis_data, avg_volatility):
         logging.info(f"Triggering AI agent via CLI for {symbol}...")
         # Используем команду openclaw напрямую
         cmd = ["openclaw", "agent", "--agent", "lead", "--message", prompt, "--deliver"]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
         
         if result.returncode == 0:
             logging.info("AI agent triggered successfully via CLI.")
@@ -151,16 +178,24 @@ def main():
                 send_telegram(msg)
                 break 
         
-        # 3. Сканирование рынка
+        # 3. Сканирование рынка (ПАРАЛЛЕЛЬНО + IN-PROCESS + REUSE CCXT)
         best_signal = None
         best_score = 0
         scanner_data = [] # Массив для Heatmap на дашборде
         volatility_sum = 0
         valid_coins = 0
         
-        for symbol in WATCHLIST:
+        # Глобальный объект биржи для повторного использования (SSL reuse)
+        static_exchange = ccxt.okx({'enableRateLimit': True})
+        
+        def process_symbol(symbol, exch=static_exchange):
             logging.info(f"Scanning {symbol}...")
-            analysis = run_analysis(symbol)
+            return symbol, run_analysis(symbol, exch)
+
+        with ThreadPoolExecutor(max_workers=len(WATCHLIST)) as executor:
+            results = list(executor.map(process_symbol, WATCHLIST))
+
+        for symbol, analysis in results:
             if analysis and analysis.get("status") == "success":
                 data = analysis["data"]
                 rsi = data["indicators"]["rsi"]
@@ -182,14 +217,14 @@ def main():
 
                 # Логика скоринга: ищем экстремальные значения RSI (<32 или >68)
                 score = 0
-                if rsi < 32: score = (32 - rsi) * 2 # Перепроданность (Long)
-                elif rsi > 68: score = (rsi - 68) * 2 # Перекупленность (Short)
+                if rsi < 32:
+                    score = (32 - rsi) * 2 # Перепроданность (Long)
+                elif rsi > 68:
+                    score = (rsi - 68) * 2 # Перекупленность (Short)
                 
                 if score > best_score:
                     best_score = score
                     best_signal = analysis
-            
-            time.sleep(1) # Защита от rate-limit
 
         # Индекс волатильности рынка
         avg_volatility = volatility_sum / valid_coins if valid_coins > 0 else 0
@@ -202,20 +237,22 @@ def main():
                     "scanner": scanner_data,
                     "market_volatility": avg_volatility
                 }, f)
-        except: pass
+        except Exception:
+            pass
 
         # Auto-Killswitch (защита от Flash Crash)
         if avg_volatility > 5.0: # Если в среднем монеты гуляют более чем на 5% за свечу
             msg = f"⚠️ AUTO-KILLSWITCH: High Market Volatility ({avg_volatility:.2f}%). Execution paused."
             logging.warning(msg)
-            continue # Пропускаем вызов ИИ
-
-        if best_signal and best_score > 0:
-            logging.info(f"Best setup found: {best_signal['symbol']} (Score: {best_score:.2f})")
-            trigger_agent(best_signal, avg_volatility)
+            # 4. Обработка сигналов (НЕБЛОКИРУЮЩАЯ)
+        if best_signal and best_score > 10:
+            logging.info(f"Signal found for {best_signal['symbol']} (Score: {best_score})")
+            # Запускаем агента в отдельном потоке, чтобы не блокировать цикл
+            executor.submit(trigger_agent, best_signal, avg_volatility)
         else:
             logging.info("No strong signals found in watchlist.")
-        
+            
+        logging.info(f"Cycle completed in {time.time() - start_time:.2f}s. Sleeping...")
         time.sleep(INTERVAL)
 
 if __name__ == "__main__":

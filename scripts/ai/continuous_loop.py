@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import time
+import redis
 from concurrent.futures import ThreadPoolExecutor
 
 import ccxt
@@ -39,6 +40,15 @@ INTERVAL = 1800 # 30 минут
 BALANCE_LIMIT = 85.0 # Глобальный рубильник ($85)
 PAPER_STATE_FILE = "data/paper_state.json"
 
+# Инициализация Redis
+try:
+    r = redis.Redis(host='localhost', port=6379, db=0, decode_responses=True)
+    r.ping()
+    REDIS_AVAILABLE = True
+except Exception:
+    REDIS_AVAILABLE = False
+    logging.warning("Redis not available. Falling back to JSON.")
+
 def send_telegram(message):
     """Отправка уведомления в Telegram."""
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID or TELEGRAM_CHAT_ID == "your_chat_id":
@@ -49,28 +59,27 @@ def send_telegram(message):
     except Exception:
         pass
 
-_last_balance_mtime = 0.0
-_cached_balance = 100.0
-
 def get_current_balance():
-    """Получение баланса (Live с OKX или Paper из JSON) с кэшированием."""
-    global _last_balance_mtime, _cached_balance
+    """Получение баланса (Live с OKX или Paper из Redis/JSON)."""
     mode = os.getenv("TRADING_MODE", "PAPER")
     
     if mode == "PAPER":
+        if REDIS_AVAILABLE:
+            balance = r.get("trader:paper:balance")
+            if balance:
+                return float(balance)
+        
+        # Fallback to JSON
         if os.path.exists(PAPER_STATE_FILE):
             try:
-                current_mtime = os.path.getmtime(PAPER_STATE_FILE)
-                if current_mtime <= _last_balance_mtime:
-                    return _cached_balance
-                
                 with open(PAPER_STATE_FILE) as f:
                     state = json.load(f)
-                    _cached_balance = state.get("balance", 100.0)
-                    _last_balance_mtime = current_mtime
-                    return _cached_balance
+                    val = state.get("balance", 100.0)
+                    if REDIS_AVAILABLE:
+                        r.set("trader:paper:balance", val)
+                    return val
             except Exception:
-                return _cached_balance
+                return 100.0
         return 100.0
     
     # LIVE Mode
@@ -119,7 +128,12 @@ def trigger_agent(analysis_data, avg_volatility):
     
     # Чтение портфеля
     portfolio_ctx = "Balance: 100.0, Positions: None"
-    if os.path.exists(PAPER_STATE_FILE):
+    if REDIS_AVAILABLE:
+        bal = r.get("trader:paper:balance") or "100.0"
+        pos_count = r.get("trader:paper:pos_count") or "0"
+        pos_details = r.get("trader:paper:pos_symbols") or "None"
+        portfolio_ctx = f"Balance: ${float(bal):.2f}, Positions Open: {pos_count} ({pos_details})"
+    elif os.path.exists(PAPER_STATE_FILE):
         try:
             with open(PAPER_STATE_FILE) as f:
                 state = json.load(f)
@@ -130,8 +144,27 @@ def trigger_agent(analysis_data, avg_volatility):
         except Exception:
             pass
 
-    prompt = f"[AUTONOMOUS SIGNAL] Signal for {symbol}: RSI={rsi}, Trend={trend}, Price: {price}. Market Volatility: {avg_volatility:.2f}%. Portfolio: {portfolio_ctx}. Analyze and execute risk-adjusted trade."
+    # Динамический SL/TP на основе ATR (средний истинный диапазон)
+    atr = data["indicators"].get("atr", 0)
+    price = data["price"]
     
+    # Рекомендуемый SL = 1.5 * ATR, TP = 3.0 * ATR (соотношение 1:2)
+    sl_val = round(atr * 1.5, 4)
+    tp_val = round(atr * 3.0, 4)
+    
+    prompt = f"""
+    MARKET SIGNAL FOUND: {symbol}
+    Current Price: {price}
+    Trend: {data['signals']['trend']}
+    RSI: {data['indicators']['rsi']}
+    Volatility Index: {avg_volatility:.2f}%
+    
+    DYNAMIC RISK MANAGEMENT:
+    - Stop-Loss: {sl_val} (~{ (sl_val/price)*100:.2f }%)
+    - Take-Profit: {tp_val} (~{ (tp_val/price)*100:.2f }%)
+    
+    TASK: Analyze this setup and execute trade if it fits our strategy.
+    """
     # Резервный метод через CLI если REST API недоступен или изменился
     try:
         logging.info(f"Triggering AI agent via CLI for {symbol}...")
@@ -159,6 +192,7 @@ def main():
     send_telegram(f"🚀 Сканер рынка ({mode}) запущен! Список: {', '.join(WATCHLIST)}")
     
     while True:
+        start_time = time.time()
         # Проверка глобальной паузы (Killswitch)
         if os.path.exists("data/pause.flag"):
             logging.info("Loop is PAUSED by Control Center.")

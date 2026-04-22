@@ -1,0 +1,81 @@
+{
+  "gateway": {
+    "bind": "0.0.0.0:18791",
+    "auth": {
+      "mode": "token",
+      "token": "admin123"
+    },
+    "controlUi": {
+      "enabled": true,
+      "allowedOrigins": [
+        "http://localhost:18791",
+        "http://127.0.0.1:18791",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+      ]
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "openrouter/google/gemini-2.0-flash-001"
+    },
+    "list": [
+      {
+        "id": "lead",
+        "name": "Nova",
+        "workspace": "./agents/lead",
+        "model": "openrouter/anthropic/claude-3.5-sonnet"
+      },
+      {
+        "id": "market_analyst",
+        "name": "Orion",
+        "workspace": "./agents/market_analyst",
+        "model": "openrouter/google/gemini-2.0-flash-001"
+      },
+      {
+        "id": "portfolio_manager",
+        "name": "Aurelius",
+        "workspace": "./agents/portfolio_manager",
+        "model": "openrouter/google/gemini-2.0-flash-001"
+      },
+      {
+        "id": "comm_executor",
+        "name": "Hermes",
+        "workspace": "./agents/comm_executor",
+        "model": "openrouter/google/gemini-2.0-flash-001"
+      },
+      {
+        "id": "data_aggregator",
+        "name": "Argus",
+        "workspace": "./agents/data_aggregator",
+        "model": "openrouter/google/gemini-2.0-flash-001"
+      },
+      {
+        "id": "strategy_engineer",
+        "name": "Daedalus",
+        "workspace": "./agents/strategy_engineer",
+        "model": "openrouter/google/gemini-2.0-flash-001"
+      },
+      {
+        "id": "performance_analyst",
+        "name": "Echo",
+        "workspace": "./agents/performance_analyst",
+        "model": "openrouter/google/gemini-2.0-flash-001"
+      }
+    ]
+  },
+  "bindings": [
+    {
+      "agentId": "lead",
+      "match": {
+        "channel": "terminal"
+      }
+    },
+    {
+      "agentId": "lead",
+      "match": {
+        "channel": "main"
+      }
+    }
+  ]
+}

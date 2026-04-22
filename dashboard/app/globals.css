@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+/* Global Premium Tokens */
+:root {
+  --background: #050507;
+  --foreground: #fafafa;
+  --muted: #a1a1aa;
+  
+  /* Vercel/Linear-like subtle card styling */
+  --card-bg: rgba(14, 14, 16, 0.7);
+  --card-border: rgba(255, 255, 255, 0.05);
+  --glow-color: rgba(59, 130, 246, 0.15);
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  background-image: 
+    radial-gradient(circle at 50% -20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.03) 0%, transparent 40%);
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #09090b;
+}
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+@layer components {
+  .premium-card {
+    background-color: var(--card-bg);
+    backdrop-filter: blur(16px) saturate(180%);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .premium-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.02) 0%, transparent 100%);
+    pointer-events: none;
+  }
+
+  .premium-card:hover {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 15px 40px -10px rgba(0, 0, 0, 0.7);
+    transform: translateY(-2px);
+  }
+
+  .badge {
+    @apply px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-tighter;
+  }
+}
+
+.text-gradient {
+  background: linear-gradient(to bottom right, #ffffff 30%, #52525b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-slow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .4; }
+}

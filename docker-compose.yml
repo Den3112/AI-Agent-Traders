@@ -1,0 +1,63 @@
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "18791:18791"
+    env_file:
+      - .env
+    environment:
+      - OPENCLAW_CONFIG_PATH=/app/openclaw.json
+      - OPENCLAW_ALLOW_INSECURE_PRIVATE_WS=1
+    volumes:
+      - .:/app
+      - ./agents:/app/agents
+      - ./openclaw.json:/app/openclaw.json
+      - /app/node_modules # Don't override container node_modules with host ones
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18791/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - ./dashboard:/app/dashboard
+      - ./data:/app/data
+      - ./heartbeat.log:/app/heartbeat.log
+      - /app/dashboard/node_modules
+    restart: always
+    depends_on:
+      - gateway
+
+  trader:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    env_file:
+      - .env
+    environment:
+      - OPENCLAW_URL=http://gateway:18789/chat
+      - OPENCLAW_CONFIG_PATH=/app/openclaw.json
+    volumes:
+      - .:/app
+      - ./agents:/app/agents
+      - ./openclaw.json:/app/openclaw.json
+    command: ["python3", "scripts/ai/continuous_loop.py"]
+    restart: always
+    depends_on:
+      - gateway

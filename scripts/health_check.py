@@ -4,9 +4,10 @@ health_check.py - Global Connectivity and System Integrity Check.
 Part of the AI Trade Team Golden Standard.
 """
 
+import json
 import os
 import sys
-import json
+
 import requests
 from dotenv import load_dotenv
 

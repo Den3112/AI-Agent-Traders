@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-import os
 import json
-import ccxt
 import logging
-import requests
+import os
 from datetime import datetime
+
+import ccxt
+import requests
 from dotenv import load_dotenv
 
 # Настройка логирования
@@ -17,7 +18,7 @@ OPENCLAW_URL = os.getenv("OPENCLAW_URL", "http://localhost:18789/chat")
 def load_paper_state():
     if not os.path.exists(STATE_FILE):
         return None
-    with open(STATE_FILE, 'r') as f:
+    with open(STATE_FILE) as f:
         return json.load(f)
 
 def save_paper_state(state):
@@ -50,7 +51,7 @@ Performance Analyst, проведи ретроспективу этой сдел
     payload = {"agentId": "lead", "sessionId": "auto", "message": msg}
     try:
         requests.post(OPENCLAW_URL, json=payload)
-    except:
+    except Exception:
         pass
 
 def sync_paper_positions():

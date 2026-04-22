@@ -4,11 +4,9 @@
 Используется AI-агентами для верификации окружения перед работой.
 """
 
-import os
 import json
-import sys
+import os
 from pathlib import Path
-from typing import List, Dict
 
 # Цвета для вывода в терминал
 GREEN = "\033[92m"
@@ -37,7 +35,7 @@ def validate_openclaw_config(config_path: str):
         return
     
     try:
-        with open(config_path, 'r') as f:
+        with open(config_path) as f:
             config = json.load(f)
             
         agents_config = config.get("agents", {})

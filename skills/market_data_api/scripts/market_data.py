@@ -4,13 +4,14 @@ market_data.py - Hardened Tool for fetching CEX prices.
 Part of the AI Trade Team Golden Standard.
 """
 
-import sys
-import json
-import requests
 import argparse
-from typing import Dict, Any
+import json
+from typing import Any
 
-def get_binance_price(symbol: str) -> Dict[str, Any]:
+import requests
+
+
+def get_binance_price(symbol: str) -> dict[str, Any]:
     """Fetches real-time price from Binance Public API."""
     url = f"https://api.binance.com/api/v3/ticker/price?symbol={symbol.upper().replace('/', '')}"
     try:

@@ -3,13 +3,22 @@ FROM node:20-slim
 # Set working directory
 WORKDIR /app/dashboard
 
-# We assume the dashboard directory is mounted or copied
-# For development, we just need to install dependencies if they are not there
-# But we'll do it in the entrypoint or during build if we want it to be faster.
+# Create a non-root user
+RUN groupadd -r trader && useradd -r -g trader trader \
+    && chown -R trader:trader /app
 
 # Pre-install dependencies to speed up startup
 COPY dashboard/package*.json ./
 RUN npm install
+
+# Copy the rest of the dashboard code
+COPY dashboard/ ./
+
+# Ensure permissions
+RUN chown -R trader:trader /app
+
+# Switch to non-root user
+USER trader
 
 # Expose Next.js port
 EXPOSE 3000

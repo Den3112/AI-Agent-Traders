@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-import time
-import subprocess
 import json
-import requests
 import logging
 import os
+import subprocess
+import time
+
 import ccxt
-from datetime import datetime
+import requests
 from dotenv import load_dotenv
 
 # Настройка логирования
@@ -46,7 +46,7 @@ def get_current_balance():
     
     if mode == "PAPER":
         if os.path.exists(PAPER_STATE_FILE):
-            with open(PAPER_STATE_FILE, 'r') as f:
+            with open(PAPER_STATE_FILE) as f:
                 state = json.load(f)
                 return state.get("balance", 100.0)
         return 100.0
@@ -81,7 +81,7 @@ def run_analysis(symbol):
             return None
         analysis = json.loads(result.stdout)
         return analysis
-    except Exception as e:
+    except Exception:
         return None
 
 def trigger_agent(analysis_data, avg_volatility):
@@ -95,7 +95,7 @@ def trigger_agent(analysis_data, avg_volatility):
     portfolio_ctx = "Balance: 100.0, Positions: None"
     if os.path.exists(PAPER_STATE_FILE):
         try:
-            with open(PAPER_STATE_FILE, 'r') as f:
+            with open(PAPER_STATE_FILE) as f:
                 state = json.load(f)
                 bal = state.get('balance', 100.0)
                 pos_count = len(state.get('positions', []))

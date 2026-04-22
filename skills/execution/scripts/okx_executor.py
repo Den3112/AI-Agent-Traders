@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-import os
-import json
 import argparse
-import ccxt
+import json
 import logging
+import os
 from datetime import datetime
+
+import ccxt
 from dotenv import load_dotenv
 
 # Настройка логирования
@@ -16,7 +17,7 @@ STATE_FILE = "data/paper_state.json"
 def load_paper_state():
     if not os.path.exists(STATE_FILE):
         return {"balance": 100.0, "positions": [], "history": []}
-    with open(STATE_FILE, 'r') as f:
+    with open(STATE_FILE) as f:
         return json.load(f)
 
 def save_paper_state(state):
@@ -33,7 +34,7 @@ def execute_paper(symbol, side, amount, entry_price, stop_loss, take_profit_arg=
         try:
             cmd = ["python3", "skills/execution/scripts/position_sizer.py", 
                    "--balance", str(state["balance"]), "--entry", str(entry_price), "--stop", str(stop_loss)]
-            res = subprocess.run(cmd, capture_output=True, text=True)
+            res = subprocess.run(cmd, capture_output=True, text=True, check=False)
             size_data = json.loads(res.stdout)
             amount = size_data["size"]
             logging.info(f"Auto-calculated position size: {amount} (Risk ~2%)")

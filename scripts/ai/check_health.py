@@ -5,7 +5,6 @@
 """
 
 import os
-import re
 from pathlib import Path
 
 # Цвета
@@ -20,7 +19,7 @@ def analyze_logs(log_path: str):
         print(f"{RED}Файл логов не найден: {log_path}{RESET}")
         return
 
-    with open(log_path, 'r') as f:
+    with open(log_path) as f:
         lines = f.readlines()
 
     last_100 = lines[-100:] if len(lines) > 100 else lines

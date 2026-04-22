@@ -4,12 +4,12 @@ risk_calculator.py - Position Sizing and VaR Calculator.
 Part of the AI Trade Team Golden Standard.
 """
 
-import sys
-import json
 import argparse
-from typing import Dict, Any
+import json
+from typing import Any
 
-def calculate_position(balance: float, risk_percent: float, entry_price: float, stop_loss: float) -> Dict[str, Any]:
+
+def calculate_position(balance: float, risk_percent: float, entry_price: float, stop_loss: float) -> dict[str, Any]:
     """Calculates position size based on balance and risk per trade."""
     risk_amount = balance * (risk_percent / 100)
     price_risk = abs(entry_price - stop_loss)

@@ -3,12 +3,13 @@
 deep_memory.py - Оживляет память агента с помощью Supabase и Redis.
 """
 
-import os
-import json
-import sys
 import argparse
+import json
+import os
+from typing import Any
+
 import requests
-from typing import Optional, Dict, Any
+
 
 def get_env(key: str) -> str:
     val = os.getenv(key)
@@ -26,7 +27,7 @@ def get_env(key: str) -> str:
 SUPABASE_URL = get_env("SUPABASE_URL")
 SUPABASE_KEY = get_env("SUPABASE_SERVICE_ROLE_KEY") or get_env("SUPABASE_ANON_KEY")
 
-def remember(agent_id: str, key: str, value: Any, metadata: Optional[Dict] = None):
+def remember(agent_id: str, key: str, value: Any, metadata: dict | None = None):
     """Сохраняет данные в Supabase."""
     url = f"{SUPABASE_URL}/rest/v1/agent_memory"
     headers = {

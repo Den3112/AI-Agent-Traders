@@ -7,6 +7,7 @@
 import os
 from pathlib import Path
 
+
 def sync_env():
     base_path = Path(__file__).parent.parent.parent
     env_path = base_path / ".env"
@@ -17,7 +18,7 @@ def sync_env():
         return
         
     # Читаем ключи из .env
-    with open(env_path, 'r') as f:
+    with open(env_path) as f:
         env_lines = f.readlines()
         
     env_keys = []
@@ -29,7 +30,7 @@ def sync_env():
     # Читаем ключи из .env.example
     example_keys = []
     if example_path.exists():
-        with open(example_path, 'r') as f:
+        with open(example_path) as f:
             example_lines = f.readlines()
         for line in example_lines:
             line = line.strip()

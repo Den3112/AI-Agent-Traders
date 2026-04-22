@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import sys
-import json
 import argparse
+import json
+
 
 def calculate_position_size(balance, entry_price, stop_loss, risk_percent=2.0):
     """
@@ -23,8 +23,7 @@ def calculate_position_size(balance, entry_price, stop_loss, risk_percent=2.0):
     # Защита от чрезмерного плеча: если позиция больше баланса (без плеча)
     # мы пока ограничиваем покупку стоимостью 100% баланса
     max_position_size_no_leverage = balance / entry_price
-    if position_size > max_position_size_no_leverage:
-        position_size = max_position_size_no_leverage
+    position_size = min(position_size, max_position_size_no_leverage)
 
     return round(position_size, 6)
 

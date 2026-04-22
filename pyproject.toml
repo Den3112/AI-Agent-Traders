@@ -22,7 +22,7 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "B", "I", "N", "UP", "PL"]
-ignore = ["PLR2004"]
+ignore = ["PLR2004", "E501"]
 
 [tool.ruff.format]
 quote-style = "double"

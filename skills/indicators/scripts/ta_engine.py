@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
+import argparse
+import json
+
 import ccxt
 import pandas as pd
-import json
-import argparse
-import sys
-import os
 from dotenv import load_dotenv
 
 load_dotenv()

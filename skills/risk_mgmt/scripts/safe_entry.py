@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-import json
 import argparse
-import sys
+import json
+
 
 def validate_trade(balance, risk_percent, entry_price, stop_loss, min_notional=10.0):
     """

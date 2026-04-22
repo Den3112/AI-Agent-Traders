@@ -53,18 +53,30 @@ except Exception:
     REDIS_AVAILABLE = False
     logging.warning("Redis not available. Falling back to JSON.")
 
-def send_telegram(message):
-    """Отправка уведомления в Telegram."""
+def send_telegram(message: str) -> None:
+    """Sends a notification message to the configured Telegram chat.
+
+    Args:
+        message: The text message to send.
+    """
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID or TELEGRAM_CHAT_ID == "your_chat_id":
         return
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     try:
-        requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": message})
+        requests.post(url, json={"chat_id": TELEGRAM_CHAT_ID, "text": message}, timeout=10)
     except Exception:
         pass
 
-def get_current_balance():
-    """Получение баланса (Live с OKX или Paper из Redis/JSON)."""
+
+def get_current_balance() -> float:
+    """Retrieves the current portfolio balance.
+
+    In PAPER mode, tries to fetch from Redis, falling back to a JSON state file.
+    In LIVE mode, fetches the real balance from the exchange (OKX).
+
+    Returns:
+        The current balance in USDT. Defaults to 100.0 if not found.
+    """
     mode = os.getenv("TRADING_MODE", "PAPER")
     
     if mode == "PAPER":
@@ -107,11 +119,18 @@ def sync_positions():
     except Exception as e:
         logging.error(f"Position sync failed: {e}")
 
-def run_analysis(symbol, exchange):
-    """Запуск TA Engine для конкретной пары (внутри процесса)."""
-    if ta_engine is None:
-        logging.error("TA Engine module not found!")
-        return None
+def run_analysis(symbol: str, exchange: ccxt.Exchange) -> dict | None:
+    """Performs technical analysis for a given symbol using the TA Engine.
+
+    This runs within the same process to avoid subprocess overhead.
+
+    Args:
+        symbol: The trading pair (e.g., 'BTC/USDT').
+        exchange: A CCXT exchange instance for data fetching.
+
+    Returns:
+        A dictionary containing technical indicators and signals, or None if failed.
+    """
         
     try:
         # Прямой вызов функций из модуля ta_engine вместо subprocess.run
@@ -123,8 +142,16 @@ def run_analysis(symbol, exchange):
         logging.error(f"In-process analysis failed for {symbol}: {e}")
         return None
 
-def trigger_agent(analysis_data, avg_volatility):
-    """Триггер ИИ-команды с учетом контекста портфеля."""
+def trigger_agent(analysis_data: dict, avg_volatility: float) -> None:
+    """Triggers the AI agent to analyze a potential trade signal.
+
+    Constructs a detailed prompt with market data and portfolio context,
+    then executes the agent via CLI (or REST fallback).
+
+    Args:
+        analysis_data: The output from run_analysis.
+        avg_volatility: Current market-wide volatility index.
+    """
     symbol = analysis_data['symbol']
     rsi = analysis_data['data']['indicators']['rsi']
     # trend = analysis_data['data']['signals']['trend'] # Unused

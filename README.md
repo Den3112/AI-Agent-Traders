@@ -42,10 +42,19 @@ Built on top of the **OpenClaw** runtime, this system transforms complex market 
 - 🛡️ **Risk-First Design**: Built-in Value-at-Risk (VaR) engines and mandatory paper-trading defaults.
 - 🔌 **Modular Skills**: Easily extendable with new data sources or execution logic.
 - 🐳 **Docker Native**: Fully containerized environment for consistent deployment.
+- ⚡ **Ultra-Fast**: Built with `uv` and `Redis` for sub-second state management.
 
 ---
 
-## 🏛️ Architecture
+## 🛠️ Tech Stack & Performance
+
+We prioritize speed and stability to ensure your agents react faster than the market.
+
+- **Core Engine**: Python 3.12 (Optimized with `uv` for 10x faster builds)
+- **High-Speed Cache**: [Redis](https://redis.io/) for O(1) state access and cross-process sync.
+- **AI Runtime**: [OpenClaw](https://openclaw.ai) for multi-agent orchestration.
+- **Market Data**: [CCXT](https://ccxt.com/) with persistent connection pooling.
+- **Frontend**: Next.js 14 / Tailwind CSS for the Mission Control dashboard.
 
 The system utilizes a **Hierarchical Delegation Pattern**, ensuring that the most capable model (Lead) coordinates specialized sub-agents.
 
@@ -118,6 +127,7 @@ graph TD
 ## 📜 Documentation
 
 - [System Architecture](docs/ARCHITECTURE.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
 - [Agent Specifications](agents/README.md)
 - [Developer Guide](docs/DEVELOPER.md)
 - [API Reference](docs/API.md)

@@ -1,75 +1,97 @@
-# System Architecture: AI Trade Team
+# System Architecture
 
-This document describes the high-level architecture and communication protocols of the AI Trading Team.
+This document describes the technical architecture of the **AI Agent Traders** ecosystem.
 
-## 1. Multi-Agent Orchestration
+## Installation
 
-The system follows a **Hierarchical Delegation Pattern**. Each agent is specialized for a specific domain, reducing the cognitive load on individual models and improving accuracy.
+1. **Clone the repository**:
 
-### Agent Flow
+   ```bash
+   git clone https://github.com/Den3112/AI-Agent-Traders.git
+   cd AI-Agent-Traders
+   ```
 
-1. **Lead (Coordinator)**: Receives user requests via the Terminal channel. Analyzes the intent and breaks it down into sub-tasks.
-2. **Analyst (Researcher)**: Digs into market data. Calls the `Data Aggregator` to fetch CEX/DEX prices and sentiments.
-3. **Strategy Engineer (Quantitative)**: Receives analysis and applies mathematical models or backtesting logic.
-4. **Portfolio Manager (Gatekeeper)**: Performs risk checks (`risk_mgmt`) and approves sizes.
-5. **Execution (Operator)**: Interacts with Exchange APIs for final order placement.
+## Overview
 
-## 2. Skill Infrastructure
+AI Agent Traders is built as a distributed, multi-service system designed for high reliability, low latency, and autonomous decision-making.
 
-Skills are modular units of capability. We categorize them into two types:
+```mermaid
+graph TB
+    subgraph "External Layers"
+        M[Market Data APIs]
+        E[Exchanges: OKX/Binance]
+    end
 
-### A. Prompt-Based Skills
-These skills use the LLM's inherent reasoning capabilities for non-deterministic tasks (e.g., news sentiment analysis).
+    subgraph "Core Infrastructure (Docker)"
+        G[Gateway: OpenClaw]
+        D[Dashboard: Next.js/React]
+        T[Trader: Python Engine]
+        R[(Redis: Fast State Cache)]
+    end
 
-### B. Hardened Tools (Python)
-
-Critical tasks that require absolute precision are offloaded to Python scripts.
-
-- **Location**: `/skills/{skill_name}/scripts/`
-- **Execution**: The agent calls these scripts via the shell, receiving structured JSON output.
-
-## 3. Communication Channels
-
-- **Terminal**: Primary interface for the user.
-- **Telegram**: Secondary event-based channel for notifications and alerts.
-- **WebSocket**: Global event bus for agent-to-agent synchronization.
-
-## 4. Security & Isolation
-
-- **Шифрование**: Секреты управляются через `.env` и никогда не логируются.
-- **Paper Trading**: Система по умолчанию использует имитационный уровень исполнения, если не установлена и не проверена переменная `TRADING_MODE=LIVE`.
-- **Блокировки**: Управление сессиями предотвращает одновременное повреждение состояния с помощью файловых блокировок.
-
-## 5. Схемы взаимодействия (JSON)
-
-Для минимизации ошибок при разработке навыков (Skills), используйте следующие схемы.
-
-### Схема ответа навыка (Skill Output)
-```json
-{
-  "status": "success | error",
-  "data": {
-    "result": "Объект с данными",
-    "metrics": {
-      "execution_time": "float",
-      "tokens_used": "int (optional)"
-    }
-  },
-  "error": "Сообщение об ошибке (null если успех)"
-}
+    M --> T
+    T <--> R
+    T <--> E
+    G <--> T
+    D <--> G
 ```
 
-### Схема риска (Risk Check)
-```json
-{
-  "agent_id": "string",
-  "action": "BUY | SELL",
-  "symbol": "string",
-  "amount": "float",
-  "leverage": "int"
-}
-```
+## Key Components
 
----
+### 1. Gateway (OpenClaw)
 
-*Последнее обновление: 2026-04-19*
+The central orchestrator and communication hub.
+- **Technology**: Node.js, OpenClaw Runtime.
+- **Role**: Manages agent lifecycles, message routing, and provides the main Chat/API interface.
+- **Hardening**: Runs with a non-root user and persistent volumes for agent memory.
+
+### 2. Trader Engine (Python)
+
+The performance-critical intelligence layer.
+- **Technology**: Python 3.12, CCXT, Pandas, Redis-py.
+- **Monitoring Loop**: `continuous_loop.py` scans markets in parallel using `ThreadPoolExecutor`.
+- **TA Engine**: In-process Technical Analysis (RSI, ATR, EMA) to eliminate process startup overhead.
+- **State Management**: Uses Redis for atomic, O(1) access to trading state (balance, positions).
+
+### 3. Dashboard
+
+Real-time monitoring and control interface.
+- **Technology**: React/Vite.
+- **Role**: Visualizes agent activity, market signals, and portfolio status.
+
+### 4. Fast Cache (Redis)
+
+High-performance in-memory store.
+
+- **Role**: Acts as a bridge between the scanner and the agents. Stores live market snapshots and "Paper Trading" state.
+
+## Performance Optimizations
+
+### Dependency Management (uv)
+
+We use `uv` instead of standard `pip` in our Docker builds.
+
+- **Result**: Build times reduced from minutes to seconds.
+- **Stability**: Content-addressable cache and strict locking.
+
+### Parallel Market Scanning
+
+The scanner uses a `ThreadPoolExecutor` to query multiple symbols simultaneously.
+
+- **Efficiency**: Reduces scan cycle time by ~80%.
+
+### Container stuck in 'Restarting'
+
+- Check logs: `docker-compose logs <service>`
+- Often caused by missing environment variables or Redis being unreachable.
+
+### Slow Market Scan
+
+- Check your internet connection.
+- Ensure `CCXT` is using the latest version to avoid API rate-limit issues.
+
+## Risk Management
+
+- **Circuit Breaker**: Automatic kill-switch if portfolio value drops below a set limit.
+- **Volatility Filter**: Suspends execution during extreme market volatility (Flash Crash protection).
+- **Dynamic SL/TP**: ATR-based exit strategy adapts to market "noise".

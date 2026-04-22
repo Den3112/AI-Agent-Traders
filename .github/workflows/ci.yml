@@ -27,6 +27,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Build Gateway
-        run: docker build -f Dockerfile.gateway -t gateway-check .
+        run: docker build -f docker/gateway.Dockerfile -t gateway-check .
       - name: Build Dashboard
-        run: docker build -f Dockerfile.dashboard -t dashboard-check .
+        run: docker build -f docker/dashboard.Dockerfile -t dashboard-check .

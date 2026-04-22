@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
+import argparse
 import json
 import logging
 import os
 import subprocess
 import sys
 import time
-import redis
 from concurrent.futures import ThreadPoolExecutor
 
 import ccxt
+import redis
 import requests
 from dotenv import load_dotenv
 
@@ -39,6 +40,9 @@ WATCHLIST = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT", "XRP/USDT"]
 INTERVAL = 1800 # 30 минут
 BALANCE_LIMIT = 85.0 # Глобальный рубильник ($85)
 PAPER_STATE_FILE = "data/paper_state.json"
+
+# Глобальный пул для запуска агентов (неблокирующий)
+agent_executor = ThreadPoolExecutor(max_workers=5)
 
 # Инициализация Redis
 try:
@@ -123,7 +127,7 @@ def trigger_agent(analysis_data, avg_volatility):
     """Триггер ИИ-команды с учетом контекста портфеля."""
     symbol = analysis_data['symbol']
     rsi = analysis_data['data']['indicators']['rsi']
-    trend = analysis_data['data']['signals']['trend']
+    # trend = analysis_data['data']['signals']['trend'] # Unused
     price = analysis_data['data']['price']
     
     # Чтение портфеля
@@ -145,6 +149,7 @@ def trigger_agent(analysis_data, avg_volatility):
             pass
 
     # Динамический SL/TP на основе ATR (средний истинный диапазон)
+    data = analysis_data['data']
     atr = data["indicators"].get("atr", 0)
     price = data["price"]
     
@@ -187,9 +192,14 @@ def trigger_agent(analysis_data, avg_volatility):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--test-run", action="store_true")
+    args = parser.parse_args()
+
     mode = os.getenv("TRADING_MODE", "PAPER")
     logging.info(f"Starting MULTI-SCANNER HEARTBEAT ({mode}). Watchlist: {', '.join(WATCHLIST)}")
-    send_telegram(f"🚀 Сканер рынка ({mode}) запущен! Список: {', '.join(WATCHLIST)}")
+    if not args.test_run:
+        send_telegram(f"🚀 Сканер рынка ({mode}) запущен! Список: {', '.join(WATCHLIST)}")
     
     while True:
         start_time = time.time()
@@ -281,12 +291,15 @@ def main():
             # 4. Обработка сигналов (НЕБЛОКИРУЮЩАЯ)
         if best_signal and best_score > 10:
             logging.info(f"Signal found for {best_signal['symbol']} (Score: {best_score})")
-            # Запускаем агента в отдельном потоке, чтобы не блокировать цикл
-            executor.submit(trigger_agent, best_signal, avg_volatility)
+            # Запускаем агента в отдельном ПЕРСИСТЕНТНОМ пуле
+            agent_executor.submit(trigger_agent, best_signal, avg_volatility)
         else:
             logging.info("No strong signals found in watchlist.")
             
         logging.info(f"Cycle completed in {time.time() - start_time:.2f}s. Sleeping...")
+        if args.test_run:
+            logging.info("Test run completed. Exiting.")
+            break
         time.sleep(INTERVAL)
 
 if __name__ == "__main__":

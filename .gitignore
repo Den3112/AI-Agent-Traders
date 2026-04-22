@@ -3,8 +3,12 @@
 *.bak
 *.tmp
 *.temp
+logs/
 nohup.out
 config_dump.json
+full_schema.json
+models.json
+fnm/
 
 # OpenClaw
 .openclaw/

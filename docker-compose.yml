@@ -2,7 +2,7 @@ services:
   gateway:
     build:
       context: .
-      dockerfile: Dockerfile.gateway
+      dockerfile: docker/gateway.Dockerfile
     ports:
       - "18791:18791"
     env_file:
@@ -30,7 +30,7 @@ services:
   dashboard:
     build:
       context: .
-      dockerfile: Dockerfile.dashboard
+      dockerfile: docker/dashboard.Dockerfile
     ports:
       - "3000:3000"
     env_file:
@@ -38,7 +38,7 @@ services:
     volumes:
       - ./dashboard:/app/dashboard
       - ./data:/app/data
-      - ./heartbeat.log:/app/heartbeat.log
+      - ./logs/heartbeat.log:/app/heartbeat.log
       - /app/dashboard/node_modules
     restart: always
     depends_on:
@@ -47,7 +47,7 @@ services:
   trader:
     build:
       context: .
-      dockerfile: Dockerfile.gateway
+      dockerfile: docker/gateway.Dockerfile
     env_file:
       - .env
     environment:

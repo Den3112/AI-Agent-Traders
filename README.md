@@ -117,7 +117,7 @@ graph TD
 
 ## 📜 Documentation
 
-- [System Architecture](ARCHITECTURE.md)
+- [System Architecture](docs/ARCHITECTURE.md)
 - [Agent Specifications](agents/README.md)
 - [Developer Guide](docs/DEVELOPER.md)
 - [API Reference](docs/API.md)

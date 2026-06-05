@@ -1,38 +1,8 @@
-[project]
-name = "ai-agent-traders"
-version = "0.1.0"
-description = "Autonomous AI Trading Team powered by OpenClaw"
-authors = [
-    { name = "Antigravity", email = "antigravity@example.com" }
-]
-dependencies = [
-    "ccxt>=4.2.0",
-    "pandas>=2.2.0",
-    "numpy>=1.26.0",
-    "python-dotenv>=1.0.0",
-    "requests>=2.31.0",
-    "pydantic>=2.6.0",
-    "ruff>=0.3.0",
-    "redis>=5.0.0",
-]
-requires-python = ">=3.10"
+[tool.black]
+line-length = 88
+target-version = ['py39']
+include = '\.pyi?$'
 
-[tool.ruff]
-line-length = 100
-target-version = "py310"
-exclude = [".venv", "node_modules", "dist", "logs", ".git", "__pycache__"]
-
-[tool.ruff.lint]
-select = ["E", "F", "B", "I", "N", "UP", "PL"]
-ignore = ["PLR2004", "E501"]
-
-[tool.ruff.lint.pylint]
-max-branches = 20
-max-statements = 100
-max-args = 10
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
+[tool.isort]
+profile = "black"
+line_length = 88
